@@ -22,7 +22,7 @@ import {
  *     degrades the demo instead of breaking it.
  */
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 export type AiOutcome<T> = {
   data: T;
@@ -35,7 +35,8 @@ export type AiOutcome<T> = {
 function client(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
+  // Pin v1beta: several current Flash models are not served on the v1 path.
+  return new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1beta" } });
 }
 
 async function generateJson(prompt: string): Promise<unknown | null> {
