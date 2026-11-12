@@ -1,120 +1,123 @@
-# TrustPay — demo video script
+# TrustPay — demo script
 
-**Hard limit 3:00.** This script is ~410 words ≈ **2:50** at a natural pace.
-Read it once with a timer before recording. If you run over 2:50, cut the
-italicised lines — they're the designed slack.
+All screen recording, voiceover only. No camera.
 
-Record **audio first**, to this script. Then record the screen freely; the edit
-fits the visuals to your voice, not the other way round.
+~345 spoken words ≈ **2:40**. The beats below are rough — don't perform to a
+stopwatch. If a sentence feels awkward in your mouth, change it. You know this
+project; it should sound like you explaining it, not reading it.
 
----
-
-## A — Webcam · 0:00–0:18
-
-> AI agents can already spend your money.
->
-> What none of them can do is check whether you actually got what you paid for.
->
-> I'm building TrustPay — the layer that decides whether the money should move at all.
-
-*(Beat. Then cut to screen.)*
+Record the **audio first**, straight through. Then record the screen however
+feels natural — the edit fits the picture to your voice.
 
 ---
 
-## B — Screen: dashboard · 0:18–0:33
+### Opening — on the dashboard *(~20s)*
 
-> TrustPay turns a plain-English payment request into a machine-readable
-> **Trust Contract**, holds the money under a real PayPal authorization, and
-> releases it only when the delivered work satisfies that contract.
+AI agents can spend your money now. They book things, they buy things, they pay
+people.
 
----
+What none of them do is check whether you actually got what you paid for.
 
-## C — Screen: new request · 0:33–1:00
-
-> I'll hire a logo designer for a hundred and fifty dollars, and I'll say the
-> logo has to carry our brand name and arrive as a vector file.
->
-> Gemini drafts the contract — amount, deliverables, and the acceptance criteria
-> as separate checkable clauses. *I can edit any of it.*
->
-> And editing bumps the version, which cancels any approval I'd already given.
-> You can't rewrite terms under a signature meant for something else.
+That's why we built TrustPay.
 
 ---
 
-## D — Screen: approve + PayPal · 1:00–1:25
+### What it is *(~15s)*
 
-> I approve the terms, and TrustPay creates a PayPal order with intent
-> AUTHORIZE.
->
-> That's a real sandbox authorization — a hold, not escrow. The money is
-> committed, but nobody has been paid.
+You describe a payment in plain English. TrustPay turns it into a contract the
+system can check, holds the money with PayPal, and only releases it when the
+work matches what you agreed.
 
 ---
 
-## E — Screen: payee view · 1:25–1:50
+### Making a contract *(~30s)*
 
-> The freelancer gets their own link. They deliver the work here — I never
-> upload their evidence for them.
->
-> This submission is a logo with no wordmark on it, exported as a PNG.
->
-> Gemini checks it clause by clause, with a confidence score on each.
+So — hire a logo designer, a hundred and fifty dollars. The logo needs our brand
+name on it, and it has to be a vector file.
 
----
+Gemini reads that and writes the contract. The amount, what gets delivered, and
+the conditions — each one separate, each one checkable.
 
-## F — Screen: CAPTURE BLOCKED · 1:50–2:25
-
-> Now I try to release the money.
->
-> **Blocked.**
->
-> Four rules pass. Rule three fails, and it names the exact clause that failed —
-> the brand name is missing.
->
-> No capture call was ever sent to PayPal. And this is the part that matters:
-> the AI didn't make that decision. A deterministic policy engine did. The
-> model's verdict is only evidence the rules read.
->
-> *If the model is unavailable, every clause degrades to "uncertain" — which
-> holds the money instead of releasing it. It fails safe.*
+We can edit any of it. And if we do, the version goes up, and any approval we
+already gave stops counting. So nobody can quietly change the terms after
+someone signed off.
 
 ---
 
-## G — Screen: corrected delivery → released · 2:25–2:42
+### Holding the money *(~20s)*
 
-> Corrected logo. Every clause satisfied. The gate passes — and that's a real
-> PayPal capture.
+We approve the terms, and TrustPay creates a PayPal order set to authorize.
 
----
-
-## H — Screen: proof bundle · 2:42–2:52
-
-> Every contract exports a proof bundle: the terms, the evidence, the AI's
-> verdicts, the human approvals, and the rule-by-rule decision, hashed so
-> tampering shows.
+That's a real hold, on the sandbox. It's not escrow — we're careful about that.
+The money's committed, but nobody's been paid.
 
 ---
 
-## I — Webcam · 2:52–3:00
+### The freelancer's side *(~25s)*
 
-> Payments that carry their own proof.
->
-> TrustPay.
+The freelancer gets their own link. They send the work from there — we don't
+upload it for them.
+
+This one's a logo with no brand name on it, saved as a PNG.
+
+Gemini checks it against each condition, and says how sure it is about each one.
 
 ---
 
-## Things to say exactly
+### It refuses *(~35s)*
 
-- "a hold, **not escrow**" — say it. PayPal judges will be listening for it.
-- "**real** sandbox authorization" — distinguishes you from mockups.
-- "a **deterministic** policy engine decided, not the model" — your thesis.
-- Never: "guaranteed", "escrow", "we win disputes".
+Now we try to release the money.
 
-## Recording checklist
+It won't.
 
-- [ ] Browser **zoomed to ~110%** so the rule text is readable at 1080p
-- [ ] 1920×1080, no notifications, bookmarks bar hidden
-- [ ] Use contract **tc_demo02** for the blocked moment (it's pre-seeded there)
-- [ ] Move the mouse slowly — fast cursor looks frantic when zoomed
-- [ ] Pause 2 seconds on **CAPTURE BLOCKED**; that's the shot
+Four rules pass. The third one fails — and it tells us exactly why. The brand
+name isn't there.
+
+Nothing went to PayPal. No capture happened.
+
+And this is the part we care about most: the AI didn't make that call. A plain
+set of rules did. The model just hands in evidence. The rules decide.
+
+If the model goes down, every condition comes back "unsure" — and unsure keeps
+the money held. It fails in the safe direction.
+
+---
+
+### Fixed, and released *(~15s)*
+
+Corrected logo. Everything checks out. The gate opens — and that's a real
+capture, on PayPal.
+
+---
+
+### Proof *(~15s)*
+
+Every contract gives you a proof file. The terms, the evidence, what the AI
+said, who approved it, and how the rules decided. It's all hashed, so you'd know
+if anyone changed it.
+
+---
+
+### Close *(~10s)*
+
+Payments that come with their own proof.
+
+That's TrustPay.
+
+---
+
+## Worth saying word for word
+
+- "a **real hold** — **it's not escrow**" (PayPal judges listen for this)
+- "**the AI didn't make that call. A plain set of rules did.**" — the whole point
+- "**unsure keeps the money held**" — the safety story in five words
+
+Never say: *guaranteed*, *escrow*, *we win disputes*.
+
+## Before you hit record
+
+- Browser at ~110% zoom so the rule text is readable at 1080p
+- 1920×1080, notifications off, bookmarks bar hidden
+- **tc_demo02** is already sitting at the blocked moment — use it
+- Move the mouse slowly
+- Hold still for two seconds on **CAPTURE BLOCKED**. That's the shot.

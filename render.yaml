@@ -6,18 +6,24 @@ services:
     buildCommand: npm ci && npm run build
     startCommand: npm start
     envVars:
-      # Set these in the Render dashboard — never commit them.
+      # Secrets — set these in the Render dashboard, never in this file.
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET
         sync: false
+      # Public by design (the PayPal JS SDK needs it in the browser), but it is
+      # inlined at BUILD time by Next.js, so it must be set before the build runs.
       - key: NEXT_PUBLIC_PAYPAL_CLIENT_ID
         sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: PAYPAL_API_BASE
         value: https://api-m.sandbox.paypal.com
+      # gemini-flash-latest is not served on the SDK's API path; 2.5-flash is.
       - key: GEMINI_MODEL
-        value: gemini-flash-latest
+        value: gemini-2.5-flash
+      # Must match a currency the sandbox business account accepts.
+      - key: NEXT_PUBLIC_TRUSTPAY_CURRENCY
+        value: USD
       - key: NODE_VERSION
         value: "22"

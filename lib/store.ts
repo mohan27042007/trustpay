@@ -122,6 +122,62 @@ function seedRecords(): ContractRecord[] {
   const created = "2026-11-10T09:12:00.000Z";
   return [
     {
+      // Matches the demo narration exactly: a $150 logo contract where four
+      // policy rules pass and R3 fails on the brand-name criterion alone.
+      contract: {
+        id: "tc_demo03",
+        version: 2,
+        created_at: "2026-11-12T08:05:00.000Z",
+        payee_email: "studio@pixelforge.example",
+        purpose: "Logo design for Ember Roast",
+        amount: { value: "150.00", currency: "USD" },
+        deliverables: ["Primary logo", "Export files"],
+        acceptance_criteria: [
+          { id: "ac1", text: "The logo includes the brand name 'Ember Roast'", verifiable_by: "vision" },
+          { id: "ac2", text: "The logo is delivered as a vector file (SVG, AI or EPS)", verifiable_by: "text" },
+          { id: "ac3", text: "A monochrome variant is included", verifiable_by: "vision" },
+        ],
+        evidence_required: ["image", "text"],
+        permitted_actions: ["create_order", "authorize", "capture", "void"],
+        capture_policy: {
+          requires_all_criteria_met: true,
+          requires_human_approval: true,
+          max_capture_amount: { value: "150.00", currency: "USD" },
+        },
+        limits: {
+          max_amount: { value: "150.00", currency: "USD" },
+          expiry: "2026-12-11T08:05:00.000Z",
+        },
+      },
+      status: "evidence_submitted",
+      paypal: {
+        orderId: "DEMO-ORDER-03",
+        authorizationId: "DEMO-AUTH-03",
+        authorizationExpiresAt: "2026-12-10T08:05:00.000Z",
+      },
+      verdicts: [
+        { criterion_id: "ac1", status: "not_met", confidence: 0.96, rationale: "The submitted artwork is a coffee-cup icon with no text on it. The brand name 'Ember Roast' does not appear anywhere in the logo.", citation: "Submitted image: icon only, no wordmark" },
+        { criterion_id: "ac2", status: "met", confidence: 0.9, rationale: "The delivery note lists an .svg export alongside the raster files." },
+        { criterion_id: "ac3", status: "met", confidence: 0.88, rationale: "A single-colour variant is present in the submitted sheet.", citation: "Second artboard" },
+      ],
+      approvals: [
+        { actor: "buyer@trustpay.demo", at: "2026-11-12T08:07:00.000Z", contract_version: 2, scope: "fund" },
+        { actor: "buyer@trustpay.demo", at: "2026-11-12T08:31:00.000Z", contract_version: 2, scope: "capture" },
+      ],
+      evidence: [
+        { kind: "text", name: "delivery-note.txt", text: "Delivered: ember-mark.png, ember-mark.svg, ember-mark-mono.png", at: "2026-11-12T08:30:00.000Z" },
+      ],
+      audit: [
+        { at: "2026-11-12T08:05:00.000Z", actor: "ai", type: "contract.drafted", summary: "Drafted a Trust Contract from the request using gemini-2.5-flash." },
+        { at: "2026-11-12T08:06:00.000Z", actor: "human", type: "contract.edited", summary: "Terms edited. Contract bumped to v2; previous approvals invalidated." },
+        { at: "2026-11-12T08:07:00.000Z", actor: "human", type: "contract.approved.fund", summary: "buyer@trustpay.demo approved the terms of contract v2." },
+        { at: "2026-11-12T08:08:00.000Z", actor: "paypal", type: "payment.authorized", summary: "Authorization hold placed for USD 150.00. This is a temporary hold, not escrow." },
+        { at: "2026-11-12T08:30:00.000Z", actor: "human", type: "evidence.submitted", summary: "Payee submitted \"delivery-note.txt\"." },
+        { at: "2026-11-12T08:30:30.000Z", actor: "ai", type: "evidence.verified", summary: "2 of 3 criteria assessed as met by gemini-2.5-flash." },
+        { at: "2026-11-12T08:31:00.000Z", actor: "human", type: "contract.approved.capture", summary: "buyer@trustpay.demo approved releasing funds for contract v2." },
+      ],
+    },
+    {
       // Seeded at the refusal moment: four rules pass, R3 fails on one
       // criterion. A judge opening the deployed app sees the product's most
       // important behaviour without having to drive the whole flow first.
