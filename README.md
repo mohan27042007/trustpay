@@ -24,12 +24,17 @@ watching it **refuse**:
 1. Describe a job in plain English — *"Hire a logo designer for $150. Pay only
    when the logo includes our brand name 'Ember Roast'."*
 2. TrustPay drafts a Trust Contract. You edit and approve it. **Editing bumps the
-   contract version, which invalidates any prior approval.**
+   contract version, which invalidates any prior approval** — so terms can't be
+   rewritten under a signature given for something else.
 3. A real PayPal sandbox order is created with `intent=AUTHORIZE` and a hold is placed.
 4. The payee submits a logo that is **missing the brand name**.
 5. The policy engine returns **RELEASE BLOCKED**, naming rule `R3` and quoting the
    unmet criterion. No capture call is sent to PayPal.
 6. Corrected evidence is submitted, the gate passes, and funds are captured for real.
+
+A human can also **override** any AI verdict — but only with a written
+justification, which is recorded in the audit trail against their name. The
+point isn't to bypass the check; it's to make bypassing it attributable.
 
 ---
 
@@ -96,7 +101,9 @@ Being precise about this, because it matters for evaluating the project.
 - Idempotency keys (`PayPal-Request-Id`) on every mutating call
 
 **Real AI:** Google Gemini drafts contracts and assesses evidence (multimodal),
-with all output validated against Zod schemas before use.
+with all output validated against Zod schemas before use. Because the free tier
+returns 503 under load, calls retry across a chain of models with a bounded
+deadline, and the model that actually answered is named in the audit trail.
 
 **Seeded, and labelled as such in the UI:** one demonstration contract
 (`tc_demo01`) ships with placeholder PayPal identifiers so a fresh deploy is
@@ -159,8 +166,25 @@ To complete a payment you also need a **sandbox buyer account**
 (PayPal Developer Dashboard → *Testing Tools → Sandbox Accounts*); use its email
 and password in the PayPal approval popup.
 
+Verify your credentials in one command:
+
+```bash
+npx tsx scripts/verify-setup.ts
+```
+
+It exercises PayPal OAuth, order creation, contract drafting and evidence
+verification, and prints which Gemini model responded.
+
 `/spike` is a deliberately unstyled page that exercises the raw PayPal
-authorize→capture round trip, useful for verifying credentials.
+authorize→capture round trip.
+
+### A note on PayPal's buttons
+
+The PayPal JS SDK buttons open a popup, which embedded and some hardened
+browsers block silently. TrustPay therefore uses PayPal's **full-page approval
+redirect**: `/fund` returns the approval URL, and the contract page
+auto-authorizes on return via `?approved=1&token=<orderId>`. This is the
+dependable path and the one used in the demo.
 
 ### Without credentials
 

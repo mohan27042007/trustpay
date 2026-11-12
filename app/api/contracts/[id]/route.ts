@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TrustContractSchema } from "@/lib/contract";
-import { audit, getContract, updateContract } from "@/lib/store";
+import { audit, deleteContract, getContract, updateContract } from "@/lib/store";
 import { errorResponse } from "@/lib/api-utils";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -63,4 +63,21 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   } catch (err) {
     return errorResponse(err);
   }
+}
+
+/** Remove a contract. Only allowed before funds are involved. */
+export async function DELETE(_req: NextRequest, { params }: Ctx) {
+  const { id } = await params;
+  const record = getContract(id);
+  if (!record) {
+    return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+  }
+  if (record.paypal.authorizationId || record.paypal.captureId) {
+    return NextResponse.json(
+      { ok: false, error: "Contracts with a PayPal authorization cannot be deleted." },
+      { status: 409 },
+    );
+  }
+  deleteContract(id);
+  return NextResponse.json({ ok: true });
 }

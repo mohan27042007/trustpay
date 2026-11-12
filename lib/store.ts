@@ -64,6 +64,11 @@ export function putContract(record: ContractRecord): ContractRecord {
   return record;
 }
 
+export function deleteContract(id: string): void {
+  delete load().contracts[id];
+  persist();
+}
+
 export function updateContract(
   id: string,
   fn: (r: ContractRecord) => ContractRecord,

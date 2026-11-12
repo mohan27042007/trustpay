@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "sonner";
 import { ContractDocument } from "./contract-document";
+import { ContractEditor } from "./contract-editor";
 import { CriteriaList } from "./criteria-list";
 import { AuditTimeline } from "./audit-timeline";
 import { PolicyGate } from "./policy-gate";
@@ -28,6 +28,9 @@ export function ContractView({
   const [busy, setBusy] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
   const [evidenceFile, setEvidenceFile] = useState<{ name: string; dataUrl: string } | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [overriding, setOverriding] = useState<string | null>(null);
+  const [justification, setJustification] = useState("");
 
   const id = record.contract.id;
   const isDemo = record.paypal.orderId?.startsWith("DEMO-") ?? false;
@@ -160,6 +163,32 @@ export function ContractView({
     }
   }
 
+  async function overrideVerdict(criterionId: string, status: "met" | "not_met") {
+    if (justification.trim().length < 3) {
+      toast.error("A justification is required to override a verdict.");
+      return;
+    }
+    setBusy("override");
+    try {
+      const { json } = await call("/override", {
+        criterionId,
+        status,
+        justification,
+        actor: "buyer@trustpay.demo",
+      });
+      if (!json.ok) throw new Error(json.error);
+      setRecord(json.record);
+      setOverriding(null);
+      setJustification("");
+      setDecision(null);
+      toast.success("Verdict overridden", { description: "Recorded in the audit trail." });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function voidHold() {
     setBusy("void");
     try {
@@ -208,7 +237,32 @@ export function ContractView({
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <div className="space-y-6">
-          <ContractDocument contract={record.contract} />
+          {editing ? (
+            <section className="rounded-xl border border-border bg-card/40 p-5">
+              <h2 className="mb-4 text-sm font-semibold tracking-tight">Edit terms</h2>
+              <ContractEditor
+                contract={record.contract}
+                onCancel={() => setEditing(false)}
+                onSaved={(next) => {
+                  setRecord(next as typeof record);
+                  setEditing(false);
+                  setDecision(null);
+                }}
+              />
+            </section>
+          ) : (
+            <div className="relative">
+              <ContractDocument contract={record.contract} />
+              {record.status === "draft" || record.status === "approved" ? (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="tp-label absolute right-4 top-16 rounded-md border border-paper-border bg-paper px-2.5 py-1.5 text-paper-foreground/70 transition-colors hover:text-paper-foreground"
+                >
+                  Edit terms
+                </button>
+              ) : null}
+            </div>
+          )}
 
           <section className="rounded-xl border border-border p-5">
             <h2 className="mb-3.5 text-sm font-semibold tracking-tight">
@@ -218,6 +272,65 @@ export function ContractView({
               criteria={record.contract.acceptance_criteria}
               verdicts={record.verdicts}
             />
+
+            {record.paypal.authorizationId && !settled ? (
+              <div className="mt-4 border-t border-border/70 pt-4">
+                {overriding ? (
+                  <div className="space-y-2.5">
+                    <p className="text-[12.5px] text-muted-foreground">
+                      Overriding:{" "}
+                      <span className="text-foreground">
+                        {record.contract.acceptance_criteria.find((c) => c.id === overriding)?.text}
+                      </span>
+                    </p>
+                    <textarea
+                      value={justification}
+                      onChange={(e) => setJustification(e.target.value)}
+                      rows={2}
+                      placeholder="Why are you overriding the assessment? This is recorded."
+                      className="w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-[13px] outline-none focus:border-uncertain/60"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => overrideVerdict(overriding, "met")}
+                        disabled={busy !== null}
+                        className="rounded-md border border-met/45 px-3 py-1.5 text-[12.5px] text-met disabled:opacity-40"
+                      >
+                        Mark met
+                      </button>
+                      <button
+                        onClick={() => overrideVerdict(overriding, "not_met")}
+                        disabled={busy !== null}
+                        className="rounded-md border border-blocked/45 px-3 py-1.5 text-[12.5px] text-blocked disabled:opacity-40"
+                      >
+                        Mark not met
+                      </button>
+                      <button
+                        onClick={() => { setOverriding(null); setJustification(""); }}
+                        className="rounded-md border border-border px-3 py-1.5 text-[12.5px] text-muted-foreground"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[12.5px] text-muted-foreground">
+                      Disagree with an assessment?
+                    </span>
+                    {record.contract.acceptance_criteria.map((c, i) => (
+                      <button
+                        key={c.id}
+                        onClick={() => setOverriding(c.id)}
+                        className="tp-label rounded-md border border-border px-2.5 py-1.5 text-muted-foreground transition-colors hover:border-uncertain/50 hover:text-uncertain"
+                      >
+                        Override {String(i + 1).padStart(2, "0")}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
           </section>
         </div>
 
@@ -251,51 +364,26 @@ export function ContractView({
               </p>
               {paypalClientId ? (
                 <>
-                <PayPalScriptProvider
-                  options={{
-                    clientId: paypalClientId,
-                    intent: "authorize",
-                    currency: record.contract.amount.currency,
-                  }}
-                >
-                  <PayPalButtons
-                    style={{ layout: "vertical", color: "white", height: 42 }}
-                    createOrder={async () => {
-                      const { json } = await call("/fund");
-                      if (!json.ok) throw new Error(json.error ?? "Could not create order");
-                      return json.orderId;
-                    }}
-                    onApprove={async (data) => {
-                      const { json } = await call("/authorize", { orderId: data.orderID });
-                      if (!json.ok) {
-                        toast.error(json.error ?? "Authorization failed");
-                        return;
-                      }
-                      setRecord(json.record);
-                      toast.success("Funds held");
-                    }}
-                    onError={(e) => toast.error(String(e))}
-                  />
-                </PayPalScriptProvider>
-
                   <button
                     onClick={fundViaRedirect}
                     disabled={busy !== null}
-                    className="mt-3 w-full rounded-md border border-border px-4 py-2.5 text-sm transition-colors hover:bg-secondary disabled:opacity-40"
+                    className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
                   >
                     {busy === "redirect"
                       ? "Opening PayPal…"
-                      : "Continue on PayPal (full page)"}
+                      : busy === "authorize"
+                        ? "Placing hold…"
+                        : "Continue on PayPal"}
                   </button>
-                  <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
-                    Use this if the buttons above do nothing — some browsers block
-                    PayPal&apos;s popup.
+                  <p className="mt-2.5 text-[12px] leading-relaxed text-muted-foreground">
+                    You&apos;ll approve on PayPal and return here, where the hold is
+                    placed automatically. Sign in with your sandbox buyer account.
                   </p>
                 </>
               ) : (
                 <p className="rounded-md border border-blocked/40 bg-blocked/10 px-3 py-2.5 text-[12.5px] text-blocked">
-                  NEXT_PUBLIC_PAYPAL_CLIENT_ID is not set, so the PayPal buttons cannot
-                  load. Add it to .env.local and restart the dev server.
+                  NEXT_PUBLIC_PAYPAL_CLIENT_ID is not set, so PayPal cannot be reached.
+                  Add it to .env.local and restart the dev server.
                 </p>
               )}
             </Panel>

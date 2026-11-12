@@ -43,10 +43,14 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       null;
 
     updateContract(id, (r) => {
+      const isNewOrder = r.paypal.orderId !== data.id;
       r.paypal.orderId = data.id;
-      r.audit.push(
-        audit("paypal", "order.created", `PayPal order ${data.id} created with intent=AUTHORIZE.`, JSON.parse(raw)),
-      );
+      // Idempotency means repeated clicks return the same order; only log it once.
+      if (isNewOrder) {
+        r.audit.push(
+          audit("paypal", "order.created", `PayPal order ${data.id} created with intent=AUTHORIZE.`, JSON.parse(raw)),
+        );
+      }
       return r;
     });
 
