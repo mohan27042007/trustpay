@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import {
   AcceptanceCriterionSchema,
+  DEFAULT_CURRENCY,
   CriterionVerdictSchema,
   type CriterionVerdict,
   type TrustContract,
@@ -155,7 +156,7 @@ Set "verifiable_by" to:
   "human"  if it needs human judgement (taste, suitability, tone).
 
 If no payee email is given, use "payee@unknown.invalid".
-If no currency is given, use "USD".
+If no currency is given, use "${DEFAULT_CURRENCY}".
 
 Return ONLY JSON of this exact shape:
 {
@@ -204,7 +205,7 @@ export function fallbackDraft(request: string): ContractDraft {
     purpose: request.trim().slice(0, 120) || "Unspecified engagement",
     payee_email: emailMatch?.[0] ?? "payee@unknown.invalid",
     amount_value: value,
-    amount_currency: "USD",
+    amount_currency: DEFAULT_CURRENCY,
     deliverables: ["Work as described in the request"],
     acceptance_criteria: [
       { text: "Delivered work matches the description in the request", verifiable_by: "human" },

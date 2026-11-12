@@ -9,9 +9,14 @@ import { z } from "zod";
  * (bumping `version` on any edit, which invalidates prior approvals).
  */
 
+/** Default currency, overridable per deployment via TRUSTPAY_CURRENCY. */
+export const DEFAULT_CURRENCY = (
+  process.env.NEXT_PUBLIC_TRUSTPAY_CURRENCY ?? "USD"
+).toUpperCase();
+
 export const MoneySchema = z.object({
   value: z.string().regex(/^\d+\.\d{2}$/, "amount must look like 150.00"),
-  currency: z.string().length(3).default("USD"),
+  currency: z.string().length(3).default(DEFAULT_CURRENCY),
 });
 export type Money = z.infer<typeof MoneySchema>;
 
