@@ -555,8 +555,23 @@ export function ContractView({
           {decision ? <PolicyGate decision={decision} explanation={explanation} /> : null}
 
           <section className="rounded-xl border border-border p-5">
-            <h2 className="mb-4 text-sm font-semibold tracking-tight">Audit trail</h2>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold tracking-tight">Audit trail</h2>
+              <a
+                href={`/api/contracts/${id}/proof`}
+                download
+                className="tp-label rounded-md border border-border px-2.5 py-1.5 text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+              >
+                ↓ Proof bundle
+              </a>
+            </div>
             <AuditTimeline events={record.audit} />
+            <p className="mt-4 border-t border-border/70 pt-3 text-[12px] leading-relaxed text-muted-foreground">
+              The proof bundle is a single tamper-evident JSON record of why funds
+              did or did not move: the agreed terms, the evidence, the AI&apos;s
+              advisory verdicts, the human approvals and the rule-by-rule policy
+              evaluation, each section hashed under one digest.
+            </p>
           </section>
         </div>
       </div>
