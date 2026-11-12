@@ -19,13 +19,13 @@ export function PolicyGate({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-xl border",
-        decision.allowed ? "border-met/35" : "border-blocked/40",
+        "relative overflow-hidden rounded-xl border",
+        decision.allowed ? "border-met/35 tp-sweep" : "border-blocked/40",
       )}
     >
       <header
         className={cn(
-          "flex items-center justify-between gap-4 px-5 py-3.5",
+          "tp-glass-edge flex items-center justify-between gap-4 px-5 py-3.5",
           decision.allowed ? "bg-met/10" : "bg-blocked/10",
         )}
       >

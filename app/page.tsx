@@ -16,8 +16,11 @@ export default async function HomePage() {
 
   return (
     <Shell>
-      <section className="tp-grid-bg border-b border-border/70">
-        <div className="mx-auto max-w-6xl px-6 py-14">
+      <section className="tp-grid-bg relative isolate overflow-hidden border-b border-border/70">
+        <div className="tp-aurora" aria-hidden>
+          <span />
+        </div>
+        <div className="relative mx-auto max-w-6xl px-6 py-14">
           <p className="tp-label text-met">AI proposes · policy decides · human approves</p>
           <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
             Let AI transact.
