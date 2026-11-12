@@ -329,14 +329,27 @@ export async function explainDecision(args: {
     ? "Every policy rule passed, so releasing the funds is permitted."
     : `Funds are being held. ${args.rules.filter((r) => !r.passed).map((r) => r.reason).join(" ")}`;
 
-  const prompt = `Explain this automated payment decision to a non-technical user
-in 2-3 short sentences. Be factual and calm. Do not promise any outcome, do not
-mention escrow, and do not suggest the decision can be appealed to PayPal.
-If funds are held, say plainly what would need to change.
+  const verdictLine = args.allowed
+    ? "THE FUNDS ARE BEING RELEASED."
+    : "THE FUNDS ARE BEING HELD AND HAVE NOT BEEN PAID.";
 
-Decision: ${args.allowed ? "RELEASE PERMITTED" : "RELEASE BLOCKED"}
-Rules:
-${args.rules.map((r) => `${r.id} ${r.title}: ${r.passed ? "PASS" : "FAIL"} — ${r.reason}`).join("\n")}
+  const prompt = `You are explaining an automated payment decision to a
+non-technical user in 2-3 short sentences.
+
+THE DECISION IS: ${verdictLine}
+Your explanation MUST agree with that sentence. ${
+    args.allowed
+      ? "Say the payment is being released."
+      : "Say clearly that the money has NOT been paid and is still being held, then say what would need to change for it to be released. Never imply the payment went through."
+  }
+
+Be factual and calm. Do not promise any outcome, do not mention escrow, and do
+not suggest the decision can be appealed to PayPal.
+
+Rules evaluated:
+${args.rules.map((r) => `${r.id} ${r.title}: ${r.passed ? "PASS" : "FAIL"} - ${r.reason}`).join("\n")}
+
+Reminder: ${verdictLine}
 
 Return ONLY JSON: { "explanation": string }`;
 
@@ -344,7 +357,23 @@ Return ONLY JSON: { "explanation": string }`;
   const parsed = z.object({ explanation: z.string().min(1) }).safeParse(raw?.value);
 
   if (parsed.success) {
-    return { data: parsed.data.explanation, fallback: false, model: raw!.model };
+    const text = parsed.data.explanation;
+    // Guard against the model inverting the verdict. Getting this backwards on
+    // a blocked capture would tell the user they have been paid when they have
+    // not, so fall back to the deterministic sentence rather than risk it.
+    const claimsReleased =
+      /\b(released|has been paid|payment (?:was|is) (?:sent|made|completed)|successfully paid|now being released)\b/i.test(
+        text,
+      );
+    const claimsHeld = /\b(held|holding|not been (?:paid|released)|withheld|blocked|on hold)\b/i.test(text);
+
+    const consistent = args.allowed ? !claimsHeld || claimsReleased : claimsHeld && !/\bnow being released\b/i.test(text);
+
+    if (consistent) {
+      return { data: text, fallback: false, model: raw!.model };
+    }
+    console.error("[ai] explanation contradicted the policy verdict; using deterministic text");
   }
+
   return { data: deterministic, fallback: true, model: PRIMARY_MODEL };
 }

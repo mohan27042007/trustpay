@@ -19,7 +19,10 @@ type DB = { contracts: Record<string, ContractRecord> };
 const g = globalThis as unknown as { __trustpay?: DB };
 
 function load(): DB {
-  if (g.__trustpay) return g.__trustpay;
+  if (g.__trustpay) {
+    ensureSeeds(g.__trustpay);
+    return g.__trustpay;
+  }
 
   let db: DB = { contracts: {} };
   try {
@@ -31,13 +34,26 @@ function load(): DB {
     db = { contracts: {} };
   }
 
-  if (Object.keys(db.contracts).length === 0) {
-    for (const r of seedRecords()) db.contracts[r.contract.id] = r;
-  }
-
+  ensureSeeds(db);
   g.__trustpay = db;
   return db;
 }
+
+/**
+ * Add any demo record that isn't present. Additive rather than
+ * only-when-empty, so a new seed reaches an instance that already has data
+ * (a redeploy, or a dev server holding state across a hot reload). A seed the
+ * user has deleted stays deleted for the life of the process.
+ */
+function ensureSeeds(db: DB) {
+  for (const r of seedRecords()) {
+    if (!db.contracts[r.contract.id] && !deletedSeeds.has(r.contract.id)) {
+      db.contracts[r.contract.id] = r;
+    }
+  }
+}
+
+const deletedSeeds = new Set<string>();
 
 function persist() {
   try {
@@ -66,6 +82,8 @@ export function putContract(record: ContractRecord): ContractRecord {
 
 export function deleteContract(id: string): void {
   delete load().contracts[id];
+  // Remember the deletion so ensureSeeds doesn't resurrect a demo record.
+  deletedSeeds.add(id);
   persist();
 }
 
@@ -103,6 +121,63 @@ export function newContractId(): string {
 function seedRecords(): ContractRecord[] {
   const created = "2026-11-10T09:12:00.000Z";
   return [
+    {
+      // Seeded at the refusal moment: four rules pass, R3 fails on one
+      // criterion. A judge opening the deployed app sees the product's most
+      // important behaviour without having to drive the whole flow first.
+      contract: {
+        id: "tc_demo02",
+        version: 1,
+        created_at: "2026-11-11T16:40:00.000Z",
+        payee_email: "freelancer@northlight.example",
+        purpose: "Landing page illustration pack",
+        amount: { value: "220.00", currency: "USD" },
+        deliverables: ["Six spot illustrations", "Source files"],
+        acceptance_criteria: [
+          { id: "ac1", text: "At least six distinct illustrations are delivered", verifiable_by: "vision" },
+          { id: "ac2", text: "Illustrations use the agreed teal and charcoal palette", verifiable_by: "vision" },
+          { id: "ac3", text: "Editable source files are included", verifiable_by: "text" },
+        ],
+        evidence_required: ["image", "text"],
+        permitted_actions: ["create_order", "authorize", "capture", "void"],
+        capture_policy: {
+          requires_all_criteria_met: true,
+          requires_human_approval: true,
+          max_capture_amount: { value: "220.00", currency: "USD" },
+        },
+        limits: {
+          max_amount: { value: "220.00", currency: "USD" },
+          expiry: "2026-12-10T16:40:00.000Z",
+        },
+      },
+      status: "evidence_submitted",
+      paypal: {
+        orderId: "DEMO-ORDER-02",
+        authorizationId: "DEMO-AUTH-02",
+        authorizationExpiresAt: "2026-12-09T16:40:00.000Z",
+      },
+      verdicts: [
+        { criterion_id: "ac1", status: "met", confidence: 0.91, rationale: "Six separate illustrations are present in the submitted sheet.", citation: "Contact sheet, rows 1-2" },
+        { criterion_id: "ac2", status: "met", confidence: 0.84, rationale: "Palette matches the agreed teal and charcoal.", citation: "Swatches sampled across all six pieces" },
+        { criterion_id: "ac3", status: "not_met", confidence: 0.93, rationale: "Only flattened PNG exports were submitted. No editable source files (.ai, .svg or .fig) appear in the delivery.", citation: "Delivery note lists six .png files only" },
+      ],
+      approvals: [
+        { actor: "buyer@trustpay.demo", at: "2026-11-11T16:42:00.000Z", contract_version: 1, scope: "fund" },
+        { actor: "buyer@trustpay.demo", at: "2026-11-11T18:05:00.000Z", contract_version: 1, scope: "capture" },
+      ],
+      evidence: [
+        { kind: "text", name: "delivery-note.txt", text: "Delivered six illustrations: hero.png, feature-a.png, feature-b.png, cta.png, footer.png, spot.png", at: "2026-11-11T18:00:00.000Z" },
+      ],
+      audit: [
+        { at: "2026-11-11T16:40:00.000Z", actor: "ai", type: "contract.drafted", summary: "Drafted a Trust Contract from the buyer's request." },
+        { at: "2026-11-11T16:42:00.000Z", actor: "human", type: "contract.approved.fund", summary: "Buyer approved the terms (v1)." },
+        { at: "2026-11-11T16:43:00.000Z", actor: "paypal", type: "payment.authorized", summary: "Authorization hold placed for USD 220.00. This is a temporary hold, not escrow." },
+        { at: "2026-11-11T18:00:00.000Z", actor: "human", type: "evidence.submitted", summary: "Payee submitted \"delivery-note.txt\"." },
+        { at: "2026-11-11T18:01:00.000Z", actor: "ai", type: "evidence.verified", summary: "2 of 3 criteria assessed as met." },
+        { at: "2026-11-11T18:05:00.000Z", actor: "human", type: "contract.approved.capture", summary: "Buyer approved releasing funds for contract v1." },
+        { at: "2026-11-11T18:06:00.000Z", actor: "policy", type: "capture.blocked", summary: "Capture refused by rule R3: 1 of 3 criteria are not satisfied: \"Editable source files are included\"." },
+      ],
+    },
     {
       contract: {
         id: "tc_demo01",
