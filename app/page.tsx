@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Shell } from "@/components/trust/shell";
 import { StatusBadge } from "@/components/trust/status-badge";
+import { StatsStrip } from "@/components/trust/stats-strip";
 import { listContracts } from "@/lib/store";
 import { formatMoney } from "@/lib/contract";
 import { connection } from "next/server";
@@ -52,6 +53,12 @@ export default async function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-10">
+        {records.length > 0 ? (
+          <div className="mb-8">
+            <StatsStrip records={records} />
+          </div>
+        ) : null}
+
         <div className="mb-5 flex items-baseline justify-between">
           <h2 className="text-lg font-semibold tracking-tight">Contracts</h2>
           <span className="tp-label text-muted-foreground">{records.length} total</span>
