@@ -418,7 +418,9 @@ export function ContractView({
                     </p>
                   ) : null}
 
-                  <div className={preparing ? "pointer-events-none opacity-50" : undefined}>
+                  <div
+                    className={`tp-paypal-surface${preparing ? " pointer-events-none opacity-50" : ""}`}
+                  >
                     <PayPalScriptProvider
                       options={{
                         clientId: paypalClientId,

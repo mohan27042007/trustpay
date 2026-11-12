@@ -48,6 +48,10 @@
  * record, not as another dashboard card.
  */
 :root {
+  /* Our own UI is dark. Declaring this explicitly stops the browser guessing,
+     and lets us opt specific subtrees back to light (see .tp-paypal-surface). */
+  color-scheme: dark;
+
   --background: #0a0b0d;
   --foreground: #e8eaed;
 
@@ -112,6 +116,32 @@
       linear-gradient(to bottom, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px);
     background-size: 44px 44px;
   }
+}
+
+/*
+ * PayPal renders its card form with light backgrounds. On a dark page the
+ * browser picks dark-scheme defaults for those controls, so typed text comes
+ * out near-white on white and looks invisible. Force the whole PayPal subtree
+ * back to a light scheme and pin explicit input colours for good measure.
+ */
+.tp-paypal-surface {
+  color-scheme: light;
+}
+.tp-paypal-surface input,
+.tp-paypal-surface select,
+.tp-paypal-surface textarea {
+  color: #15171c;
+  background-color: #ffffff;
+  caret-color: #15171c;
+}
+.tp-paypal-surface input::placeholder,
+.tp-paypal-surface textarea::placeholder {
+  color: #6b7280;
+  opacity: 1;
+}
+.tp-paypal-surface label,
+.tp-paypal-surface span {
+  color: #15171c;
 }
 
 /* Policy-gate rules stamp in sequentially — reads as a machine deciding. */
