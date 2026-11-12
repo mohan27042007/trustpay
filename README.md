@@ -27,7 +27,8 @@ watching it **refuse**:
    contract version, which invalidates any prior approval** — so terms can't be
    rewritten under a signature given for something else.
 3. A real PayPal sandbox order is created with `intent=AUTHORIZE` and a hold is placed.
-4. The payee submits a logo that is **missing the brand name**.
+4. The payee — on their own link-shareable view at `/payee/<id>`, with no buyer
+   controls — submits a logo that is **missing the brand name**.
 5. The policy engine returns **RELEASE BLOCKED**, naming rule `R3` and quoting the
    unmet criterion. No capture call is sent to PayPal.
 6. Corrected evidence is submitted, the gate passes, and funds are captured for real.
@@ -37,6 +38,26 @@ justification, which is recorded in the audit trail against their name. The
 point isn't to bypass the check; it's to make bypassing it attributable.
 
 ---
+
+Two seeded contracts ship with the app so a fresh deploy is never empty:
+`tc_demo01` (released) and **`tc_demo02`, which sits at the refusal moment** —
+four rules pass, R3 fails. Open it and press *Release funds* to see the gate
+refuse without driving the whole flow first.
+
+## Proof bundle
+
+Every contract exports a **proof bundle**: one JSON record of the agreed terms,
+the evidence considered, the AI's advisory verdicts, the human approvals and the
+rule-by-rule policy evaluation. Each section is hashed and the bundle carries a
+digest over those hashes, so alteration is detectable by recomputation.
+
+It is **tamper-evident, not signed** — we make no cryptographic non-repudiation
+claim. Uploaded file bytes are hashed rather than embedded.
+
+```bash
+curl -s localhost:3000/api/contracts/tc_demo02/proof | jq '.policy_evaluation.blocked_by'
+# "R3"
+```
 
 ## Architecture
 

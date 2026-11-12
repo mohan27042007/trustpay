@@ -28,8 +28,6 @@ export function ContractView({
   const [decision, setDecision] = useState<PolicyDecision | null>(null);
   const [explanation, setExplanation] = useState<string | undefined>();
   const [busy, setBusy] = useState<string | null>(null);
-  const [evidenceText, setEvidenceText] = useState("");
-  const [evidenceFile, setEvidenceFile] = useState<{ name: string; dataUrl: string } | null>(null);
   const [editing, setEditing] = useState(false);
   const [overriding, setOverriding] = useState<string | null>(null);
   const [justification, setJustification] = useState("");
@@ -40,6 +38,8 @@ export function ContractView({
 
   const id = record.contract.id;
   const isDemo = record.paypal.orderId?.startsWith("DEMO-") ?? false;
+  const payeeLink =
+    typeof window === "undefined" ? `/payee/${id}` : `${window.location.origin}/payee/${id}`;
 
   async function call(path: string, body?: unknown) {
     const res = await fetch(`/api/contracts/${id}${path}`, {
@@ -112,7 +112,10 @@ export function ContractView({
     const token = searchParams.get("token");
     if (searchParams.get("approved") && token) {
       handledReturn.current = true;
-      void authorizeOrder(token);
+      // Reacting to an external signal (PayPal redirected back with an approved
+      // order), not deriving state from props. The guard above makes this run
+      // exactly once. Deferred so the state update lands outside the effect body.
+      queueMicrotask(() => void authorizeOrder(token));
     }
   }, [searchParams, authorizeOrder, id, router]);
 
@@ -141,32 +144,6 @@ export function ContractView({
       if (!json.ok) throw new Error(json.error);
       setRecord(json.record);
       toast.success(scope === "fund" ? "Terms approved" : "Release approved");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function submitEvidence() {
-    if (!evidenceText.trim() && !evidenceFile) return;
-    setBusy("evidence");
-    try {
-      const { json } = await call("/evidence", {
-        text: evidenceText.trim() || undefined,
-        dataUrl: evidenceFile?.dataUrl,
-        name: evidenceFile?.name,
-      });
-      if (!json.ok) throw new Error(json.error);
-      setRecord(json.record);
-      setEvidenceText("");
-      setEvidenceFile(null);
-      setDecision(null);
-      if (json.ai?.fallback) {
-        toast.warning("Verification unavailable", { description: json.ai.note });
-      } else {
-        toast.success("Evidence assessed");
-      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
@@ -477,43 +454,42 @@ export function ContractView({
             </Panel>
           ) : null}
 
-          {/* ---- Step: evidence ---- */}
+          {/* ---- Step: hand off to the payee ---- */}
           {(record.status === "authorized" || record.status === "evidence_submitted") ? (
-            <Panel step="Step 4" title="Submit delivery evidence">
+            <Panel step="Step 4" title="Waiting on the payee">
               <p className="mb-3.5 text-[13px] leading-relaxed text-muted-foreground">
-                The payee submits proof. TrustPay assesses it against each criterion
-                and reports confidence — it never decides the payment on its own.
+                The freelancer delivers the work and submits evidence from their own
+                view. Send them this link.
               </p>
-              <textarea
-                value={evidenceText}
-                onChange={(e) => setEvidenceText(e.target.value)}
-                rows={3}
-                placeholder="Describe what was delivered…"
-                className="w-full resize-y rounded-lg border border-border bg-card/60 px-3 py-2.5 text-[13px] outline-none focus:border-met/60"
-              />
-              <label className="mt-2.5 flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-[12.5px] text-muted-foreground hover:border-foreground/30">
+              <div className="flex gap-2">
                 <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    const reader = new FileReader();
-                    reader.onload = () =>
-                      setEvidenceFile({ name: f.name, dataUrl: String(reader.result) });
-                    reader.readAsDataURL(f);
-                  }}
+                  readOnly
+                  value={payeeLink}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="tp-value flex-1 rounded-md border border-border bg-card px-3 py-2 text-[12px] text-muted-foreground outline-none"
                 />
-                {evidenceFile ? `Attached: ${evidenceFile.name}` : "Attach an image (optional)"}
-              </label>
-              <button
-                onClick={submitEvidence}
-                disabled={busy !== null || (!evidenceText.trim() && !evidenceFile)}
-                className="mt-3 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-40"
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText(payeeLink);
+                    toast.success("Payee link copied");
+                  }}
+                  className="rounded-md border border-border px-3 py-2 text-[12.5px] hover:bg-secondary"
+                >
+                  Copy
+                </button>
+              </div>
+              <a
+                href={`/payee/${id}`}
+                className="mt-2.5 inline-block text-[12.5px] text-muted-foreground underline underline-offset-4 hover:text-foreground"
               >
-                {busy === "evidence" ? "Assessing…" : "Submit and assess"}
-              </button>
+                Open the payee view →
+              </a>
+              {record.evidence.length > 0 ? (
+                <p className="mt-3.5 rounded-md border border-sky-400/30 bg-sky-400/10 px-3 py-2 text-[12.5px] text-sky-300">
+                  {record.evidence.length} submission
+                  {record.evidence.length === 1 ? "" : "s"} received and assessed.
+                </p>
+              ) : null}
             </Panel>
           ) : null}
 
