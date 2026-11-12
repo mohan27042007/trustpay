@@ -22,7 +22,24 @@ import {
  *     degrades the demo instead of breaking it.
  */
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+const PRIMARY_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+
+/**
+ * Models are tried in order. The free tier returns 503 "high demand" under load,
+ * so a single model is not dependable for a live demo. Dedup preserves order.
+ */
+const MODEL_CHAIN = [
+  ...new Set([
+    PRIMARY_MODEL,
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+  ]),
+];
+
+/** Total budget for one logical AI call, so a demo never hangs. */
+const AI_DEADLINE_MS = Number(process.env.AI_DEADLINE_MS ?? 22_000);
 
 export type AiOutcome<T> = {
   data: T;
@@ -39,20 +56,64 @@ function client(): GoogleGenAI | null {
   return new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1beta" } });
 }
 
-async function generateJson(prompt: string): Promise<unknown | null> {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function statusOf(err: unknown): number {
+  const m = err instanceof Error ? err.message : String(err);
+  const match = m.match(/"code"\s*:\s*(\d{3})/) ?? m.match(/\b(4\d\d|5\d\d)\b/);
+  return match ? Number(match[1]) : 0;
+}
+
+/**
+ * Run a generation across the model chain with bounded retries.
+ *
+ * 503/429 -> brief backoff, then the next model. 404 -> skip the model at once
+ * (it isn't served on this API version). Returns the model that actually
+ * answered so the UI and audit log can name it honestly.
+ */
+async function callModel(
+  parts: unknown[],
+  temperature: number,
+): Promise<{ text: string; model: string } | null> {
   const ai = client();
   if (!ai) return null;
+  const startedAt = Date.now();
+
+  for (const model of MODEL_CHAIN) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (Date.now() - startedAt > AI_DEADLINE_MS) {
+        console.error("[ai] deadline exceeded; using fallback");
+        return null;
+      }
+      try {
+        const res = await ai.models.generateContent({
+          model,
+          contents: [{ role: "user", parts }] as never,
+          config: { responseMimeType: "application/json", temperature },
+        });
+        if (res.text) return { text: res.text, model };
+      } catch (err) {
+        const status = statusOf(err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[ai] ${model} attempt ${attempt + 1} failed (${status || "?"}): ${msg.slice(0, 120)}`);
+        if (status === 404 || status === 400) break; // wrong model for this API version
+        if (status === 401 || status === 403) return null; // bad key: chain won't help
+        await sleep(500 * (attempt + 1));
+      }
+    }
+  }
+  return null;
+}
+
+async function generateJson(
+  prompt: string,
+): Promise<{ value: unknown; model: string } | null> {
+  const out = await callModel([{ text: prompt }], 0.2);
+  if (!out) return null;
   try {
-    const res = await ai.models.generateContent({
-      model: MODEL,
-      contents: prompt,
-      config: { responseMimeType: "application/json", temperature: 0.2 },
-    });
-    const text = res.text;
-    if (!text) return null;
-    return JSON.parse(text);
-  } catch (err) {
-    console.error("[ai] generation failed:", err instanceof Error ? err.message : err);
+    return { value: JSON.parse(out.text), model: out.model };
+  } catch {
+    console.error("[ai] response was not valid JSON");
     return null;
   }
 }
@@ -112,20 +173,20 @@ ${request}
 </untrusted>`;
 
   const raw = await generateJson(prompt);
-  const parsed = DraftSchema.safeParse(raw);
+  const parsed = DraftSchema.safeParse(raw?.value);
 
   if (parsed.success) {
     const d = parsed.data;
     // Normalise money to two decimal places.
     d.amount_value = parseFloat(d.amount_value).toFixed(2);
     d.amount_currency = d.amount_currency.toUpperCase();
-    return { data: d, fallback: false, model: MODEL };
+    return { data: d, fallback: false, model: raw!.model };
   }
 
   return {
     data: fallbackDraft(request),
     fallback: true,
-    model: MODEL,
+    model: PRIMARY_MODEL,
     note: raw === null
       ? "The model was unavailable, so TrustPay used a deterministic parser. Review the terms carefully before approving."
       : "The model returned data that failed schema validation, so TrustPay used a deterministic parser. Review the terms carefully.",
@@ -211,18 +272,13 @@ Deliverables promised: ${contract.deliverables.join("; ")}
 Evidence notes: ${textEvidence}
 </untrusted>`;
 
-  const ai = client();
+  const out = await callModel([{ text: prompt }, ...imageParts], 0.1);
   let raw: unknown = null;
-  if (ai) {
+  if (out) {
     try {
-      const res = await ai.models.generateContent({
-        model: MODEL,
-        contents: [{ role: "user", parts: [{ text: prompt }, ...imageParts] }],
-        config: { responseMimeType: "application/json", temperature: 0.1 },
-      });
-      raw = res.text ? JSON.parse(res.text) : null;
-    } catch (err) {
-      console.error("[ai] verify failed:", err instanceof Error ? err.message : err);
+      raw = JSON.parse(out.text);
+    } catch {
+      console.error("[ai] verify response was not valid JSON");
     }
   }
 
@@ -243,7 +299,7 @@ Evidence notes: ${textEvidence}
       }
       return v;
     });
-    return { data: verdicts, fallback: false, model: MODEL };
+    return { data: verdicts, fallback: false, model: out!.model };
   }
 
   // Fallback: refuse to assert anything. Uncertain never unlocks capture (R3).
@@ -256,7 +312,7 @@ Evidence notes: ${textEvidence}
         "Automated verification was unavailable, so this criterion has not been assessed. A human must review it before funds can be released.",
     })),
     fallback: true,
-    model: MODEL,
+    model: PRIMARY_MODEL,
     note: "Evidence verification fell back to 'uncertain' for every criterion. This deliberately keeps funds held rather than releasing them on an unchecked assumption.",
   };
 }
@@ -285,10 +341,10 @@ ${args.rules.map((r) => `${r.id} ${r.title}: ${r.passed ? "PASS" : "FAIL"} — $
 Return ONLY JSON: { "explanation": string }`;
 
   const raw = await generateJson(prompt);
-  const parsed = z.object({ explanation: z.string().min(1) }).safeParse(raw);
+  const parsed = z.object({ explanation: z.string().min(1) }).safeParse(raw?.value);
 
   if (parsed.success) {
-    return { data: parsed.data.explanation, fallback: false, model: MODEL };
+    return { data: parsed.data.explanation, fallback: false, model: raw!.model };
   }
-  return { data: deterministic, fallback: true, model: MODEL };
+  return { data: deterministic, fallback: true, model: PRIMARY_MODEL };
 }

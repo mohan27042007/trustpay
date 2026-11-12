@@ -164,6 +164,8 @@ export async function createAuthorizeOrder(args: {
   currency: string;
   description: string;
   referenceId: string;
+  returnUrl?: string;
+  cancelUrl?: string;
 }) {
   return paypalPost<PayPalOrder>("/v2/checkout/orders", {
     requestId: `order-${args.referenceId}`,
@@ -182,6 +184,8 @@ export async function createAuthorizeOrder(args: {
       application_context: {
         shipping_preference: "NO_SHIPPING",
         user_action: "CONTINUE",
+        ...(args.returnUrl ? { return_url: args.returnUrl } : {}),
+        ...(args.cancelUrl ? { cancel_url: args.cancelUrl } : {}),
       },
     },
   });

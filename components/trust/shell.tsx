@@ -18,7 +18,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               href="/"
               className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
-              Contracts
+              My contracts
             </Link>
             <Link
               href="/new"

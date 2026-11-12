@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "sonner";
 import { ContractDocument } from "./contract-document";
@@ -19,6 +20,8 @@ export function ContractView({
   initial: ContractRecord;
   paypalClientId: string;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [record, setRecord] = useState(initial);
   const [decision, setDecision] = useState<PolicyDecision | null>(null);
   const [explanation, setExplanation] = useState<string | undefined>();
@@ -36,6 +39,61 @@ export function ContractView({
       body: JSON.stringify(body ?? {}),
     });
     return { res, json: await res.json() };
+  }
+
+  /** Authorize an order the buyer approved on PayPal, then clean the URL. */
+  const authorizeOrder = useCallback(
+    async (orderId: string) => {
+      setBusy("authorize");
+      try {
+        const res = await fetch(`/api/contracts/${id}/authorize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId }),
+        });
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.error ?? "Authorization failed");
+        setRecord(json.record);
+        toast.success("Funds held");
+        router.replace(`/contracts/${id}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Authorization failed");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [id, router],
+  );
+
+  // Returning from PayPal's approval page: ?approved=1&token=<orderId>
+  const handledReturn = useRef(false);
+  useEffect(() => {
+    if (handledReturn.current) return;
+    if (searchParams.get("cancelled")) {
+      handledReturn.current = true;
+      toast.info("PayPal approval was cancelled");
+      router.replace(`/contracts/${id}`);
+      return;
+    }
+    const token = searchParams.get("token");
+    if (searchParams.get("approved") && token) {
+      handledReturn.current = true;
+      void authorizeOrder(token);
+    }
+  }, [searchParams, authorizeOrder, id, router]);
+
+  /** Full-page approval: works where the PayPal popup is blocked. */
+  async function fundViaRedirect() {
+    setBusy("redirect");
+    try {
+      const { json } = await call("/fund");
+      if (!json.ok) throw new Error(json.error ?? "Could not create order");
+      if (!json.approveUrl) throw new Error("PayPal did not return an approval link");
+      window.location.href = json.approveUrl;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+      setBusy(null);
+    }
   }
 
   async function approve(scope: "fund" | "capture") {
@@ -192,6 +250,7 @@ export function ContractView({
                 still controls the funds.
               </p>
               {paypalClientId ? (
+                <>
                 <PayPalScriptProvider
                   options={{
                     clientId: paypalClientId,
@@ -218,6 +277,21 @@ export function ContractView({
                     onError={(e) => toast.error(String(e))}
                   />
                 </PayPalScriptProvider>
+
+                  <button
+                    onClick={fundViaRedirect}
+                    disabled={busy !== null}
+                    className="mt-3 w-full rounded-md border border-border px-4 py-2.5 text-sm transition-colors hover:bg-secondary disabled:opacity-40"
+                  >
+                    {busy === "redirect"
+                      ? "Opening PayPal…"
+                      : "Continue on PayPal (full page)"}
+                  </button>
+                  <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+                    Use this if the buttons above do nothing — some browsers block
+                    PayPal&apos;s popup.
+                  </p>
+                </>
               ) : (
                 <p className="rounded-md border border-blocked/40 bg-blocked/10 px-3 py-2.5 text-[12.5px] text-blocked">
                   NEXT_PUBLIC_PAYPAL_CLIENT_ID is not set, so the PayPal buttons cannot
