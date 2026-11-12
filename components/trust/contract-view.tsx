@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "sonner";
+import { Spinner } from "./spinner";
 import { ContractDocument } from "./contract-document";
 import { ContractEditor } from "./contract-editor";
 import { CriteriaList } from "./criteria-list";
@@ -31,6 +33,10 @@ export function ContractView({
   const [editing, setEditing] = useState(false);
   const [overriding, setOverriding] = useState<string | null>(null);
   const [justification, setJustification] = useState("");
+  // Pre-created PayPal order, so clicking the button is instant rather than
+  // waiting on a round trip to PayPal while nothing appears to happen.
+  const [preparedOrder, setPreparedOrder] = useState<{ orderId: string; approveUrl: string | null } | null>(null);
+  const [preparing, setPreparing] = useState(false);
 
   const id = record.contract.id;
   const isDemo = record.paypal.orderId?.startsWith("DEMO-") ?? false;
@@ -68,6 +74,31 @@ export function ContractView({
     [id, router],
   );
 
+  const readyToFund =
+    record.status === "approved" &&
+    !record.paypal.authorizationId &&
+    Boolean(paypalClientId);
+
+  // Create the order up front so the button responds immediately on click.
+  const prepared = useRef(false);
+  useEffect(() => {
+    if (!readyToFund || prepared.current) return;
+    prepared.current = true;
+    setPreparing(true);
+    fetch(`/api/contracts/${id}/fund`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.ok) setPreparedOrder({ orderId: json.orderId, approveUrl: json.approveUrl ?? null });
+        else toast.error(json.error ?? "Could not prepare the PayPal order");
+      })
+      .catch(() => toast.error("Could not reach PayPal"))
+      .finally(() => setPreparing(false));
+  }, [readyToFund, id]);
+
   // Returning from PayPal's approval page: ?approved=1&token=<orderId>
   const handledReturn = useRef(false);
   useEffect(() => {
@@ -89,6 +120,10 @@ export function ContractView({
   async function fundViaRedirect() {
     setBusy("redirect");
     try {
+      if (preparedOrder?.approveUrl) {
+        window.location.href = preparedOrder.approveUrl;
+        return;
+      }
       const { json } = await call("/fund");
       if (!json.ok) throw new Error(json.error ?? "Could not create order");
       if (!json.approveUrl) throw new Error("PayPal did not return an approval link");
@@ -364,20 +399,71 @@ export function ContractView({
               </p>
               {paypalClientId ? (
                 <>
+                  {preparing ? (
+                    <p className="mb-3 flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2.5 text-[12.5px] text-muted-foreground">
+                      <Spinner /> Preparing your PayPal order…
+                    </p>
+                  ) : preparedOrder ? (
+                    <p className="tp-value mb-3 rounded-md border border-met/30 bg-met/10 px-3 py-2 text-[11.5px] text-met">
+                      Order {preparedOrder.orderId} ready
+                    </p>
+                  ) : null}
+
+                  {busy === "redirect" || busy === "authorize" ? (
+                    <p className="mb-3 flex items-center gap-2 rounded-md border border-uncertain/40 bg-uncertain/10 px-3 py-2.5 text-[12.5px] text-uncertain">
+                      <Spinner />
+                      {busy === "authorize"
+                        ? "Placing the authorization hold…"
+                        : "Opening PayPal…"}
+                    </p>
+                  ) : null}
+
+                  <div className={preparing ? "pointer-events-none opacity-50" : undefined}>
+                    <PayPalScriptProvider
+                      options={{
+                        clientId: paypalClientId,
+                        intent: "authorize",
+                        currency: record.contract.amount.currency,
+                      }}
+                    >
+                      <PayPalButtons
+                        style={{
+                          layout: "vertical",
+                          color: "gold",
+                          shape: "rect",
+                          label: "paypal",
+                          height: 45,
+                        }}
+                        disabled={preparing || busy !== null}
+                        createOrder={async () => {
+                          // Normally instant: the order was created on mount.
+                          if (preparedOrder) return preparedOrder.orderId;
+                          const { json } = await call("/fund");
+                          if (!json.ok) throw new Error(json.error ?? "Could not create order");
+                          setPreparedOrder({ orderId: json.orderId, approveUrl: json.approveUrl ?? null });
+                          return json.orderId;
+                        }}
+                        onApprove={async (data) => {
+                          await authorizeOrder(data.orderID);
+                        }}
+                        onCancel={() => toast.info("PayPal approval was cancelled")}
+                        onError={(e) => toast.error(String(e))}
+                      />
+                    </PayPalScriptProvider>
+                  </div>
+
                   <button
                     onClick={fundViaRedirect}
-                    disabled={busy !== null}
-                    className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+                    disabled={busy !== null || preparing}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm transition-colors hover:bg-secondary disabled:opacity-40"
                   >
-                    {busy === "redirect"
-                      ? "Opening PayPal…"
-                      : busy === "authorize"
-                        ? "Placing hold…"
-                        : "Continue on PayPal"}
+                    {busy === "redirect" ? <Spinner /> : null}
+                    {busy === "redirect" ? "Opening PayPal…" : "Continue on PayPal (full page)"}
                   </button>
-                  <p className="mt-2.5 text-[12px] leading-relaxed text-muted-foreground">
-                    You&apos;ll approve on PayPal and return here, where the hold is
-                    placed automatically. Sign in with your sandbox buyer account.
+                  <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+                    Use the full-page option if the buttons above don&apos;t open — some
+                    browsers block PayPal&apos;s popup. Sign in with your sandbox buyer
+                    account.
                   </p>
                 </>
               ) : (
