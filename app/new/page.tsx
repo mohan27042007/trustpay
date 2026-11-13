@@ -39,7 +39,7 @@ export default function NewRequestPage() {
 
   return (
     <Shell>
-      <div className="mx-auto max-w-3xl px-6 py-12">
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-12">
         <p className="tp-label text-met">Step 1 of 4</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">
           Describe the payment

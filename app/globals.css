@@ -92,6 +92,17 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /*
+   * Keyboard focus was invisible: inputs set outline-none and changed only a
+   * border colour, which tells someone tabbing through nothing. One ring, on
+   * everything focusable, and only for keyboard focus.
+   */
+  :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--met);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv02", "cv03", "cv04";

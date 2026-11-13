@@ -21,7 +21,7 @@ export default async function HomePage() {
         <div className="tp-aurora" aria-hidden>
           <span />
         </div>
-        <div className="relative mx-auto max-w-6xl px-6 py-14">
+        <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-14">
           <p className="tp-label text-met">AI proposes · policy decides · human approves</p>
           <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
             Let AI transact.
@@ -52,7 +52,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-10">
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         {records.length > 0 ? (
           <div className="mb-8">
             <StatsStrip records={records} />
