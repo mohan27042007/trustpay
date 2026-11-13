@@ -39,8 +39,9 @@ point isn't to bypass the check; it's to make bypassing it attributable.
 
 ---
 
-Two seeded contracts ship with the app so a fresh deploy is never empty:
-`tc_demo01` (released) and **`tc_demo02`, which sits at the refusal moment** —
+Three seeded contracts ship with the app so a fresh deploy is never empty:
+`tc_demo01` (released), plus **`tc_demo02` and `tc_demo03`, which sit at the
+refusal moment** —
 four rules pass, R3 fails. Open it and press *Release funds* to see the gate
 refuse without driving the whole flow first.
 
@@ -126,9 +127,10 @@ with all output validated against Zod schemas before use. Because the free tier
 returns 503 under load, calls retry across a chain of models with a bounded
 deadline, and the model that actually answered is named in the audit trail.
 
-**Seeded, and labelled as such in the UI:** one demonstration contract
-(`tc_demo01`) ships with placeholder PayPal identifiers so a fresh deploy is
-never empty. The app shows a banner on that record saying so.
+**Seeded, and labelled as such in the UI:** three demonstration contracts
+(`tc_demo01`, `tc_demo02`, `tc_demo03`) ship with placeholder `DEMO-` PayPal
+identifiers so a fresh deploy is never empty. The app shows a banner on each of
+them saying so. Any contract you create yourself uses the live sandbox.
 
 **Not built, and not claimed:** Payouts, the Disputes API, and webhooks are out
 of scope for this submission.
@@ -149,7 +151,7 @@ of scope for this submission.
 
 | Tool | Role | Where |
 |---|---|---|
-| **Google Gemini API** (`gemini-flash-latest`, configurable via `GEMINI_MODEL`) | Powers the product: contract drafting, multimodal evidence verification, plain-language decision explanations | [`lib/ai.ts`](lib/ai.ts) |
+| **Google Gemini API** (`gemini-2.5-flash` by default, configurable via `GEMINI_MODEL`; falls back across a chain of Flash models when one is unavailable) | Powers the product: contract drafting, multimodal evidence verification, plain-language decision explanations | [`lib/ai.ts`](lib/ai.ts) |
 | **Claude Code (Claude Opus 5)** | Development tool — used to architect, write and test this codebase. Not part of the running product. | — |
 
 **Prompt-injection handling:** uploaded evidence and user text are untrusted.
@@ -196,8 +198,39 @@ npx tsx scripts/verify-setup.ts
 It exercises PayPal OAuth, order creation, contract drafting and evidence
 verification, and prints which Gemini model responded.
 
-`/spike` is a deliberately unstyled page that exercises the raw PayPal
-authorize→capture round trip.
+Or open **`/diagnostics`** in the running app, which does the same checks and
+explains anything that fails.
+
+### Troubleshooting
+
+**"This seller doesn't accept payments in your currency"** at the PayPal
+approval page — and it can look like the login is simply looping. The sandbox
+*business* account behind your client id cannot accept the configured currency;
+the buyer's account is not the problem, the merchant's country decides this. A
+sandbox business account created with country **India** will reject USD, for
+example. Create a US-country sandbox Business account, create a new REST app
+bound to it (the Create App screen has a dropdown for which business account
+owns the app — easy to miss), and use those credentials. Alternatively set
+`NEXT_PUBLIC_TRUSTPAY_CURRENCY` to a currency your merchant account accepts.
+Note that PayPal only refuses this at the approval page, so order creation
+succeeds and nothing earlier in the flow warns you.
+
+**Gemini returns 503.** The free tier sheds load under pressure. Calls retry
+across a chain of Flash models with a bounded deadline; if they all fail, every
+criterion is recorded as `uncertain`, which holds funds rather than releasing
+them. Retrying usually clears it.
+
+**The PayPal buttons do nothing when clicked.** The popup is being blocked —
+common in embedded browsers. Use the **Continue on PayPal (full page)** button
+underneath, which takes the redirect route instead.
+
+### No authentication, by design
+
+There are no accounts and no access control: anyone holding a contract id can
+act as either party, and the payee page links to the buyer view. That keeps the
+demo openable by a reviewer with a single URL. A real deployment would put
+identity in front of every route under `app/api/contracts/`. Nothing in the
+policy engine depends on its absence.
 
 ### A note on PayPal's buttons
 
