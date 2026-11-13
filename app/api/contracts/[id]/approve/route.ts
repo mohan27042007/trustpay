@@ -20,6 +20,15 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
     }
 
+    // Approvals on a settled contract are meaningless and left the record
+    // looking as though a decision were still pending.
+    if (record.status === "captured" || record.status === "voided") {
+      return NextResponse.json(
+        { ok: false, error: `This contract is already ${record.status}.` },
+        { status: 409 },
+      );
+    }
+
     const who = String(actor ?? "buyer@trustpay.demo");
     const updated = updateContract(id, (r) => {
       r.approvals.push({

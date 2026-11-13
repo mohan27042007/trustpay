@@ -20,6 +20,15 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         { status: 409 },
       );
     }
+    // Voiding cancels a hold; once captured there is no hold left to cancel.
+    // PayPal would reject this anyway — better to say so plainly than forward
+    // a raw API error.
+    if (record.paypal.captureId) {
+      return NextResponse.json(
+        { ok: false, error: "These funds have already been released and cannot be voided." },
+        { status: 409 },
+      );
+    }
 
     const { raw } = await voidAuthorization(record.paypal.authorizationId);
 

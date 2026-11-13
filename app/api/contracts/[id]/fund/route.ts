@@ -33,7 +33,11 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       amount: record.contract.amount.value,
       currency: record.contract.amount.currency,
       description: record.contract.purpose,
-      referenceId: record.contract.id,
+      // Version-scoped: this becomes the PayPal-Request-Id, and PayPal replays
+      // the original order for a repeated key. Keyed on the contract id alone,
+      // re-funding after an edit silently returned the pre-edit order — the
+      // old amount held against the new terms.
+      referenceId: `${record.contract.id}-v${record.contract.version}`,
       returnUrl: `${origin}/contracts/${record.contract.id}?approved=1`,
       cancelUrl: `${origin}/contracts/${record.contract.id}?cancelled=1`,
     });

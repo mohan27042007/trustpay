@@ -11,6 +11,22 @@ import type { TrustContract } from "@/lib/contract";
  * (policy rule R4 binds an approval to the version it was given for). This is
  * what stops an approved contract from being quietly rewritten afterwards.
  */
+/**
+ * First unused `acN`.
+ *
+ * Numbering from the array length collides after a deletion: remove ac2 from
+ * [ac1, ac2, ac3] and the next addition is also ac3. Criterion ids are the
+ * join key for verdicts, so two criteria sharing one id means a single "met"
+ * verdict satisfies both — a way past rule R3 reachable from the UI.
+ */
+function nextCriterionId(existing: { id: string }[]): string {
+  const taken = new Set(existing.map((c) => c.id));
+  for (let n = 1; ; n++) {
+    const candidate = `ac${n}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+}
+
 export function ContractEditor({
   contract,
   onSaved,
@@ -133,10 +149,7 @@ export function ContractEditor({
         </div>
         <button
           onClick={() =>
-            setCriteria([
-              ...criteria,
-              { id: `ac${criteria.length + 1}`, text: "", verifiable_by: "text" },
-            ])
+            setCriteria([...criteria, { id: nextCriterionId(criteria), text: "", verifiable_by: "text" }])
           }
           className="mt-2 rounded-md border border-dashed border-border px-3 py-1.5 text-[12.5px] text-muted-foreground hover:border-foreground/30 hover:text-foreground"
         >

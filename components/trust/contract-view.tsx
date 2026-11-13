@@ -80,10 +80,15 @@ export function ContractView({
     Boolean(paypalClientId);
 
   // Create the order up front so the button responds immediately on click.
-  const prepared = useRef(false);
+  // Tracked per contract version rather than as a one-shot flag: editing the
+  // terms mints a new version, and the order prepared for the previous one
+  // holds the previous amount. A plain boolean left that stale order in place.
+  const preparedFor = useRef<number | null>(null);
+  const version = record.contract.version;
   useEffect(() => {
-    if (!readyToFund || prepared.current) return;
-    prepared.current = true;
+    if (!readyToFund || preparedFor.current === version) return;
+    preparedFor.current = version;
+    setPreparedOrder(null);
     setPreparing(true);
     fetch(`/api/contracts/${id}/fund`, {
       method: "POST",
@@ -97,7 +102,7 @@ export function ContractView({
       })
       .catch(() => toast.error("Could not reach PayPal"))
       .finally(() => setPreparing(false));
-  }, [readyToFund, id]);
+  }, [readyToFund, id, version]);
 
   // Returning from PayPal's approval page: ?approved=1&token=<orderId>
   const handledReturn = useRef(false);
