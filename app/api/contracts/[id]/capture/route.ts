@@ -43,6 +43,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         rules: decision.rules,
       });
       updateContract(id, (r) => {
+        r.decision = {
+          at: new Date().toISOString(),
+          allowed: false,
+          blocked_by: decision.blockedBy?.id ?? null,
+          rules: decision.rules,
+        };
         r.audit.push(
           audit(
             "policy",
@@ -70,6 +76,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const explanation = await explainDecision({ allowed: true, rules: decision.rules });
 
     const updated = updateContract(id, (r) => {
+      r.decision = {
+        at: new Date().toISOString(),
+        allowed: true,
+        blocked_by: null,
+        rules: decision.rules,
+      };
       r.paypal.captureId = data.id;
       r.status = "captured";
       r.audit.push(

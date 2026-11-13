@@ -1,0 +1,66 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1200px;height:800px;background:#0a0b0d;font-family:'Inter Tight',sans-serif;color:#e8eaed;overflow:hidden;position:relative}
+.aurora{position:absolute;inset:0;overflow:hidden}
+.aurora i{position:absolute;border-radius:50%;filter:blur(80px)}
+.a1{width:620px;height:420px;left:-140px;top:-160px;background:radial-gradient(circle,rgba(61,220,151,.55),transparent 70%)}
+.a2{width:520px;height:360px;right:-120px;top:-120px;background:radial-gradient(circle,rgba(59,130,246,.45),transparent 70%)}
+.a3{width:420px;height:300px;left:45%;bottom:-180px;background:radial-gradient(circle,rgba(255,92,92,.30),transparent 70%)}
+.wrap{position:relative;padding:50px 58px;height:100%;display:flex;flex-direction:column}
+.kicker{font-family:'IBM Plex Mono',monospace;font-size:16px;letter-spacing:.2em;text-transform:uppercase;color:#8b919e}
+h1{font-size:60px;font-weight:600;letter-spacing:-.025em;line-height:1.05;margin-top:12px}
+h1 em{font-style:normal;color:#3ddc97}
+.row{display:flex;gap:32px;margin-top:30px;flex:1;align-items:flex-start}
+.card{background:#f7f6f3;color:#15171c;border-radius:16px;padding:24px 26px;width:348px;box-shadow:0 30px 70px -30px rgba(0,0,0,.95)}
+.card .lbl{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(21,23,28,.5)}
+.blob{height:126px;display:flex;align-items:center;justify-content:center;margin:14px 0 10px}
+.note{font-size:14px;color:rgba(21,23,28,.64);line-height:1.45}
+.gate{flex:1;border:1px solid rgba(255,92,92,.45);border-radius:16px;overflow:hidden;background:rgba(18,20,25,.74)}
+.gate header{background:rgba(255,92,92,.12);padding:15px 22px;display:flex;justify-content:space-between;align-items:center}
+.gate header .t{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8b919e}
+.gate header .s{font-size:21px;font-weight:600;color:#ff5c5c;margin-top:2px}
+.pill{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b919e;border:1px solid rgba(139,145,158,.35);border-radius:999px;padding:6px 12px}
+.rule{display:flex;gap:13px;padding:12px 22px;border-top:1px solid rgba(35,39,47,.9)}
+.rule .id{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;width:25px}
+.ok .id{color:#3ddc97}.bad .id{color:#ff5c5c}
+.rule .tx{font-size:14.5px;font-weight:500}
+.rule .rs{font-size:13px;color:#8b919e;margin-top:2px;line-height:1.4}
+.bad{background:rgba(255,92,92,.07)}
+.foot{display:flex;align-items:baseline;gap:18px;margin-top:26px}
+.logo{font-size:29px;font-weight:700;letter-spacing:-.02em}
+.logo span{color:#3ddc97}
+.tag{font-size:18px;color:#8b919e}
+</style></head><body>
+<div class="aurora"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
+<div class="wrap">
+  <div class="kicker">Your AI agent just approved this logo</div>
+  <h1>It cost $150.<br>It has <em>no logo on it.</em></h1>
+  <div class="row">
+    <div class="card">
+      <div class="lbl">Delivered &middot; ember-mark.png</div>
+      <div class="blob">
+        <svg width="148" height="118" viewBox="0 0 150 120" fill="none">
+          <path d="M34 36h66v34a24 24 0 0 1-24 24H58a24 24 0 0 1-24-24V36z" stroke="#15171c" stroke-width="5" stroke-linejoin="round"/>
+          <path d="M100 46h12a13 13 0 0 1 0 26h-12" stroke="#15171c" stroke-width="5"/>
+          <path d="M28 102h78" stroke="#15171c" stroke-width="5" stroke-linecap="round"/>
+          <path d="M55 20c0 6-6 6-6 12M75 16c0 7-7 7-7 14" stroke="#15171c" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+        </svg>
+      </div>
+      <div class="note">The contract said it must carry the brand name <strong>&ldquo;Ember Roast&rdquo;</strong>. It doesn&rsquo;t.</div>
+    </div>
+    <div class="gate">
+      <header>
+        <div><div class="t">Policy engine</div><div class="s">Release blocked</div></div>
+        <div class="pill">4 / 5 rules pass</div>
+      </header>
+      <div class="rule ok"><div class="id">R1</div><div><div class="tx">Amount within contract limit</div><div class="rs">USD 150.00 is within the USD 150.00 limit.</div></div></div>
+      <div class="rule ok"><div class="id">R2</div><div><div class="tx">Capture is a permitted action</div></div></div>
+      <div class="rule bad"><div class="id">R3</div><div><div class="tx">All acceptance criteria met &nbsp;<span style="color:#ff5c5c;font-family:'IBM Plex Mono',monospace;font-size:12px">FAIL</span></div><div class="rs">1 of 3 not satisfied: &ldquo;The logo includes the brand name &lsquo;Ember Roast&rsquo;&rdquo;.</div></div></div>
+      <div class="rule ok"><div class="id">R4</div><div><div class="tx">Human approval recorded</div></div></div>
+      <div class="rule ok"><div class="id">R5</div><div><div class="tx">Authorization live and uncaptured</div></div></div>
+    </div>
+  </div>
+  <div class="foot"><div class="logo">Trust<span>Pay</span></div><div class="tag">Let AI transact. Let TrustPay protect.</div></div>
+</div></body></html>

@@ -43,10 +43,10 @@ export default async function HomePage() {
               Create a Trust Contract
             </Link>
             <Link
-              href="/spike"
+              href="/diagnostics"
               className="rounded-md border border-border px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
-              PayPal sandbox check
+              Check your setup
             </Link>
           </div>
         </div>

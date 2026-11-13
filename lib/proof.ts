@@ -25,7 +25,13 @@ function sha256(value: unknown): string {
 
 export function buildProofBundle(record: ContractRecord, now = new Date()) {
   const { contract } = record;
-  const decision = canCapture(record, contract.amount, now);
+  // Prefer the decision recorded when the gate actually ran. Re-evaluating
+  // here would judge the contract by its state *after* the outcome: a captured
+  // contract fails R5 ("uncaptured"), so a successful release would export a
+  // bundle claiming it should have been blocked. Fall back to a live
+  // evaluation only for contracts the gate has not reached yet.
+  const recorded = record.decision;
+  const live = canCapture(record, contract.amount, now);
 
   const sections = {
     contract,
@@ -40,12 +46,21 @@ export function buildProofBundle(record: ContractRecord, now = new Date()) {
     })),
     ai_verdicts: record.verdicts,
     human_approvals: record.approvals,
-    policy_evaluation: {
-      allowed: decision.allowed,
-      evaluated_at: now.toISOString(),
-      rules: decision.rules,
-      blocked_by: decision.blockedBy?.id ?? null,
-    },
+    policy_evaluation: recorded
+      ? {
+          allowed: recorded.allowed,
+          evaluated_at: recorded.at,
+          rules: recorded.rules,
+          blocked_by: recorded.blocked_by,
+          source: "recorded at the time the gate ran",
+        }
+      : {
+          allowed: live.allowed,
+          evaluated_at: now.toISOString(),
+          rules: live.rules,
+          blocked_by: live.blockedBy?.id ?? null,
+          source: "evaluated now; the capture gate has not run for this contract yet",
+        },
     paypal: record.paypal,
     audit: record.audit,
   };

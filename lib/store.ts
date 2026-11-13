@@ -270,6 +270,18 @@ function seedRecords(): ContractRecord[] {
         { criterion_id: "ac1", status: "met", confidence: 0.94, rationale: "The wordmark 'Ember Roast' is legible in the supplied artwork.", citation: "Wordmark, lower third of the image" },
         { criterion_id: "ac2", status: "met", confidence: 0.88, rationale: "Submission notes list an .svg file." },
       ],
+      decision: {
+        at: "2026-11-11T14:02:00.000Z",
+        allowed: true,
+        blocked_by: null,
+        rules: [
+          { id: "R1", title: "Amount within contract limit", passed: true, reason: "Requested USD 150.00 is within the USD 150.00 contract limit." },
+          { id: "R2", title: "Capture is a permitted action", passed: true, reason: "This contract permits the capture action." },
+          { id: "R3", title: "All acceptance criteria met", passed: true, reason: "All 2 acceptance criteria are satisfied." },
+          { id: "R4", title: "Human approval for this contract version", passed: true, reason: "Approved by buyer@trustpay.demo for contract v2." },
+          { id: "R5", title: "Authorization is live and uncaptured", passed: true, reason: "Authorization DEMO-AUTH-01 was live and uncaptured." },
+        ],
+      },
       approvals: [
         { actor: "buyer@trustpay.demo", at: "2026-11-10T09:20:00.000Z", contract_version: 2, scope: "fund" },
         { actor: "buyer@trustpay.demo", at: "2026-11-11T14:02:00.000Z", contract_version: 2, scope: "capture" },

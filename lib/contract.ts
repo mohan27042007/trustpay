@@ -105,6 +105,24 @@ export type AuditEvent = {
   detail?: unknown;
 };
 
+/**
+ * The policy verdict as it stood when funds were released or refused.
+ *
+ * Stored rather than recomputed, because the rules read live state: once a
+ * capture succeeds, R5 ("uncaptured") correctly starts failing, so re-running
+ * the engine afterwards reports that the release should never have happened.
+ * A proof bundle has to carry the decision that was actually acted on.
+ *
+ * Shaped structurally instead of importing PolicyDecision, since policy.ts
+ * imports this module.
+ */
+export type RecordedDecision = {
+  at: string;
+  allowed: boolean;
+  blocked_by: string | null;
+  rules: { id: string; title: string; passed: boolean; reason: string }[];
+};
+
 export type ContractStatus =
   | "draft"
   | "approved"
@@ -126,6 +144,8 @@ export type ContractRecord = {
   };
   verdicts: CriterionVerdict[];
   approvals: Approval[];
+  /** Set the last time the capture gate ran. See RecordedDecision. */
+  decision?: RecordedDecision;
   audit: AuditEvent[];
   evidence: {
     kind: "image" | "file" | "text";
