@@ -6,6 +6,11 @@ TrustPay turns a natural-language payment request into a **machine-readable Trus
 Contract**, holds the money under a real PayPal authorization, and releases it
 only when submitted evidence satisfies the contract's acceptance criteria.
 
+**Live demo — <https://trustpay-ngt6.onrender.com>.** Three contracts are already
+seeded, so there is something to look at straight away. It runs on Render's free
+tier, which puts the app to sleep when nobody is using it: the first request can
+take around 30 seconds to wake it up. Everything after that is quick.
+
 The ordering is the whole idea:
 
 > **AI proposes → a deterministic policy engine decides → a human approves → PayPal executes.**
@@ -247,6 +252,22 @@ evidence verification records every criterion as `uncertain` — which correctly
 keeps funds held rather than releasing them on an unchecked assumption.
 
 ---
+
+## After the deadline
+
+The hackathon submission was frozen on 12 November. The repository was not. We
+kept reading our own code, and [`docs/defect-report.md`](docs/defect-report.md)
+is what came out of it: six defects, what each one would have cost, and how it
+was fixed.
+
+Two were bad enough to undercut the main claim of the project. One was a leftover
+endpoint that could capture money without running the policy engine at all. The
+other let a client edit a contract and switch the safety rules off on the way
+through. Both are closed, and both are written up rather than quietly patched,
+because a project about auditability should be able to show its own.
+
+None of that work adds a feature. The demo video and this README still describe
+the same product they did on submission day — it just has fewer holes in it.
 
 ## Stack
 
