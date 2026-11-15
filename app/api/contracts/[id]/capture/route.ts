@@ -4,6 +4,7 @@ import { explainDecision } from "@/lib/ai";
 import { canCapture } from "@/lib/policy";
 import { audit, getContract, updateContract } from "@/lib/store";
 import { errorResponse } from "@/lib/api-utils";
+import { isSeededDemo } from "@/lib/contract";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -62,6 +63,21 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       // 409, and crucially: no PayPal call was made.
       return NextResponse.json(
         { ok: false, blocked: true, decision, explanation: explanation.data },
+        { status: 409 },
+      );
+    }
+
+    // The gate allowed it, but this record's PayPal ids are placeholders.
+    // Calling PayPal with DEMO-AUTH-02 returns a bare 404, so say what is
+    // actually going on instead of surfacing that.
+    if (isSeededDemo(record)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          decision,
+          error:
+            "This is a seeded demonstration record — its PayPal identifiers are placeholders, so there is no real authorization to capture. The policy gate above ran for real. Create a new contract to exercise the live sandbox.",
+        },
         { status: 409 },
       );
     }

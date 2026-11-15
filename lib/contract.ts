@@ -156,6 +156,20 @@ export type ContractRecord = {
   }[];
 };
 
+/**
+ * Seeded demonstration records carry placeholder `DEMO-` PayPal identifiers so
+ * a fresh deploy is never empty. Sending one to PayPal returns a bare 404, so
+ * the routes that move money check this first and explain instead. The policy
+ * gate still runs on them — refusing a release is the point of two of the
+ * three seeds — only the PayPal call is skipped.
+ */
+export function isSeededDemo(record: Pick<ContractRecord, "paypal">): boolean {
+  return Boolean(
+    record.paypal.orderId?.startsWith("DEMO-") ||
+      record.paypal.authorizationId?.startsWith("DEMO-"),
+  );
+}
+
 /** Money as integer minor units, so we never compare floats. */
 export function toMinorUnits(m: Money): number {
   return Math.round(parseFloat(m.value) * 100);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { voidAuthorization } from "@/lib/paypal";
 import { audit, getContract, updateContract } from "@/lib/store";
 import { errorResponse } from "@/lib/api-utils";
+import { isSeededDemo } from "@/lib/contract";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -26,6 +27,18 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     if (record.paypal.captureId) {
       return NextResponse.json(
         { ok: false, error: "These funds have already been released and cannot be voided." },
+        { status: 409 },
+      );
+    }
+
+    // Placeholder ids would just produce a PayPal 404. See isSeededDemo.
+    if (isSeededDemo(record)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "This is a seeded demonstration record — its PayPal identifiers are placeholders, so there is no real authorization to void. Create a new contract to exercise the live sandbox.",
+        },
         { status: 409 },
       );
     }
